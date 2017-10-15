@@ -1,6 +1,7 @@
 package com.hackny.devshade.hacknyad;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Intent;
@@ -336,6 +337,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class ClarifyMy extends AsyncTask<String, String, String> {
+        private ProgressDialog dialog;
+
+        @Override
+        protected void onPreExecute() {
+            dialog = new ProgressDialog(MainActivity.this);
+            dialog.setMessage("Machines are doing their job...");
+            dialog.show();
+        }
+
         @Override
         protected String doInBackground(String... args) {
             ClarifaiClient client = new ClarifaiBuilder("e8200df8d6b14beaab26d15641935799").buildSync();
@@ -376,6 +386,9 @@ public class MainActivity extends AppCompatActivity {
                             continue;
                         }
                     }
+                    if (dialog.isShowing()) {
+                        dialog.dismiss();
+                    }
                     GetData getData = new GetData();
                     DataInput dataInput = new DataInput();
                     dataInput.input = inputString;
@@ -396,8 +409,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class GetData extends AsyncTask<DataInput, String, Result> {
-
+        //private ProgressDialog dialog;
         HttpURLConnection urlConnection;
+
+        @Override
+        protected void onPreExecute() {
+            //dialog = new ProgressDialog(MainActivity.this);
+            //dialog.setMessage("Doing something, please wait.");
+            //dialog.show();
+        }
 
         @Override
         protected Result doInBackground(DataInput... args) {
@@ -447,6 +467,9 @@ public class MainActivity extends AppCompatActivity {
                 //Log.i("URL STRING", urlString);
                 //logTextView.setText(urlString);
                 //Glide.with(MainActivity.this.getApplicationContext()).load(urlString).into(gifHolder);
+//                if (dialog.isShowing()) {
+//                    dialog.dismiss();
+//                }
                 for(int i=0; i<progressChangedValue; i++){
                     JSONObject dataObject = (JSONObject) dataArray.get(i);
                     JSONObject images = dataObject.getJSONObject("images");
