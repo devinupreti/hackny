@@ -1,14 +1,21 @@
 package com.hackny.devshade.hacknyad;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.media.Image;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,6 +39,8 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -39,7 +48,18 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
+
+import com.bumptech.glide.load.model.StringLoader;
 import  com.bumptech.glide.request.target.ViewTarget.*;
+
+import clarifai2.api.ClarifaiBuilder;
+import clarifai2.api.ClarifaiClient;
+import clarifai2.dto.input.ClarifaiInput;
+import okhttp3.OkHttpClient;
+
+//import clarifai2.api.ClarifaiBuilder;
+//import clarifai2.dto.input.ClarifaiInput;
+//import okhttp3.OkHttpClient;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -53,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView speakImageView;
     ImageView settingImageView;
     ImageView trendingImageView;
+    ImageView cameraImageView;
     //Button shareButton;
     //MapView mapView;
     //GoogleMap googleMap;
@@ -68,12 +89,17 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences pref;
     SharedPreferences.Editor editor;
 
-
+    Uri imageUri;
+    File photo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        new ClarifaiBuilder("e8200df8d6b14beaab26d15641935799")
+                .client(new OkHttpClient()) // OPTIONAL. Allows customization of OkHttp by the user
+                .buildSync();
 
         pref = getApplicationContext().getSharedPreferences("sunsetPref", 0); // 0 - for private mode
         editor = pref.edit();
@@ -84,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         speakImageView = (ImageView) findViewById(R.id.speakImageView);
         settingImageView = (ImageView) findViewById(R.id.settingImageView);
         trendingImageView = (ImageView) findViewById(R.id.trendingImageView);
+        cameraImageView = (ImageView) findViewById(R.id.cameraImageView);
         //shareButton = (Button) findViewById(R.id.sharebutton);
         inflateThisView = (LinearLayout) findViewById(R.id.inflateThisView);
 
@@ -197,6 +224,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        cameraImageView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // do something when the button is clicked
+                settingsLayout.setVisibility(View.GONE);
+                scrollerView.setVisibility(View.VISIBLE);
+                inflateThisView.removeAllViews();
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                if(ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                    requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            123);
+                    Toast.makeText(MainActivity.this, "No Permissions", Toast.LENGTH_SHORT).show();
+                }
+
+                photo = new File(Environment.getExternalStorageDirectory(),  "Pic.jpg");
+                intent.putExtra(MediaStore.EXTRA_OUTPUT,
+                        Uri.fromFile(photo));
+                imageUri = Uri.fromFile(photo);
+                startActivityForResult(intent, 200);
+
+            }
+        });
+
 //        shareButton.setOnClickListener(new View.OnClickListener() {
 //            public void onClick(View v) {
 //                // do something when the button is clicked
@@ -244,6 +294,32 @@ public class MainActivity extends AppCompatActivity {
                 break;
             }
 
+            case 200: {
+
+                if (resultCode == RESULT_OK) {
+                    Uri selectedImage = imageUri;
+                    getContentResolver().notifyChange(selectedImage, null);
+//                    ContentResolver cr = getContentResolver();
+//                    Bitmap bitmap;
+                    try {
+//                        bitmap = android.provider.MediaStore.Images.Media
+//                                .getBitmap(cr, selectedImage);
+//                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+//                        byte[] byteArray = stream.toByteArray();
+
+                        ClarifyMy clarifyMy = new ClarifyMy();
+                        clarifyMy.execute("Dummy");
+
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Failed to load", Toast.LENGTH_SHORT)
+                                .show();
+                        Log.e("Camera", e.toString());
+                    }
+                }
+
+            }
+
         }
     }
 
@@ -257,6 +333,66 @@ public class MainActivity extends AppCompatActivity {
     class Result{
         String result;
         Boolean isHigh;
+    }
+
+    class ClarifyMy extends AsyncTask<String, String, String> {
+        @Override
+        protected String doInBackground(String... args) {
+            ClarifaiClient client = new ClarifaiBuilder("e8200df8d6b14beaab26d15641935799").buildSync();
+            String abc = client.getDefaultModels().generalModel().predict()
+                    .withInputs(ClarifaiInput.forImage(photo))
+                    .executeSync().rawBody();
+            //Log.i("YAHOOOO", abc);
+            return abc;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //Do something with the JSON string
+            try{
+                ArrayList<String> myList = new ArrayList<>();
+                JSONObject jsonObj = new JSONObject(result);
+                int status = jsonObj.getJSONObject("status").getInt("code");
+                if(status==10000){
+                    JSONObject temp = (JSONObject) jsonObj.getJSONArray("outputs").get(0);
+                    JSONObject temp2 = (JSONObject) temp.getJSONObject("data");
+                    JSONArray temp3 = (JSONArray) temp2.getJSONArray("concepts");
+                    for(int i=0; i< temp3.length(); i++){
+                        JSONObject thisObject = (JSONObject) temp3.get(i);
+                        String AIString = thisObject.getString("name");
+                        myList.add(AIString);
+                    }
+                    //now use the myList
+                    int counter=0;
+                    String inputString = "";
+                    for(int i=0; i<myList.size(); i++){
+                        String thisString = myList.get(i);
+                        if(counter<5 && !thisString.equals("no person") && !thisString.equals("adult") && !thisString.equals("outdoors") && !thisString.equals("indoors")){
+                            inputString = inputString.concat(thisString+"+");
+                            Log.i("AI String", inputString);
+                            counter++;
+                        }
+                        else{
+                            continue;
+                        }
+                    }
+                    GetData getData = new GetData();
+                    DataInput dataInput = new DataInput();
+                    dataInput.input = inputString;
+                    dataInput.isHigh = isHeavy;
+                    dataInput.progress = progressChangedValue;
+                    dataInput.isTrending = false;
+                    getData.execute(dataInput);
+                }
+                else{
+                    Log.e("ERROR", "Status not 10000");
+                }
+            }
+            catch(JSONException e){
+                Log.e("ON_POST_EXECUTE", e.toString());
+            }
+        }
+
     }
 
     class GetData extends AsyncTask<DataInput, String, Result> {
@@ -301,48 +437,48 @@ public class MainActivity extends AppCompatActivity {
 
             //Do something with the JSON string
             try{
-            JSONObject jsonObj = new JSONObject(result.result);
-            JSONArray dataArray = jsonObj.getJSONArray("data");
+                JSONObject jsonObj = new JSONObject(result.result);
+                JSONArray dataArray = jsonObj.getJSONArray("data");
 //            JSONObject dataObject = (JSONObject) dataArray.get(0);
 //            JSONObject images = dataObject.getJSONObject("images");
 //            JSONObject downsized_medium = images.getJSONObject("downsized_large");
 //            String urlString = downsized_medium.getString("url");
-            //urlString = urlString.replaceAll("'\'", "");
-            //Log.i("URL STRING", urlString);
-            //logTextView.setText(urlString);
-            //Glide.with(MainActivity.this.getApplicationContext()).load(urlString).into(gifHolder);
-            for(int i=0; i<progressChangedValue; i++){
-                JSONObject dataObject = (JSONObject) dataArray.get(i);
-                JSONObject images = dataObject.getJSONObject("images");
-                JSONObject sizeParam = images.getJSONObject("original");
-                if(!result.isHigh){
-                    sizeParam = images.getJSONObject("downsized_medium");
-                }
-                final String urlString = sizeParam.getString("url");
-                View view = getLayoutInflater().inflate(R.layout.inflaterone, inflateThisView, false);
-                ImageView tempImageView = (ImageView) view.findViewById(R.id.imageViewForOneGif);
-                tempImageView.setMaxHeight(widthdp*2);
-                tempImageView.setMinimumHeight(widthdp*2);
-                //tempImageView.setMaxWidth(widthdp);
-                //tempImageView.setMinimumWidth(widthdp);
-                //Button shareButton = (Button) view.findViewById(R.id.sharebuttonit);
-                tempImageView.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        // do something when the button is clicked
-                        Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
-                        whatsappIntent.setType("text/plain");
-                        //whatsappIntent.setPackage("com.whatsapp");
-                        whatsappIntent.putExtra(Intent.EXTRA_TEXT, urlString);
-                        try {
-                            startActivity(whatsappIntent);
-                        } catch (android.content.ActivityNotFoundException ex) {
-                            Toast.makeText(getApplicationContext(), "Apps have not been installed.", Toast.LENGTH_SHORT).show();
-                        }
+                //urlString = urlString.replaceAll("'\'", "");
+                //Log.i("URL STRING", urlString);
+                //logTextView.setText(urlString);
+                //Glide.with(MainActivity.this.getApplicationContext()).load(urlString).into(gifHolder);
+                for(int i=0; i<progressChangedValue; i++){
+                    JSONObject dataObject = (JSONObject) dataArray.get(i);
+                    JSONObject images = dataObject.getJSONObject("images");
+                    JSONObject sizeParam = images.getJSONObject("original");
+                    if(!result.isHigh){
+                        sizeParam = images.getJSONObject("downsized_medium");
                     }
-                });
-                Glide.with(MainActivity.this.getApplicationContext()).load(urlString).into(tempImageView);
-                inflateThisView.addView(view);
-            }
+                    final String urlString = sizeParam.getString("url");
+                    View view = getLayoutInflater().inflate(R.layout.inflaterone, inflateThisView, false);
+                    ImageView tempImageView = (ImageView) view.findViewById(R.id.imageViewForOneGif);
+                    tempImageView.setMaxHeight(widthdp*2);
+                    tempImageView.setMinimumHeight(widthdp*2);
+                    //tempImageView.setMaxWidth(widthdp);
+                    //tempImageView.setMinimumWidth(widthdp);
+                    //Button shareButton = (Button) view.findViewById(R.id.sharebuttonit);
+                    tempImageView.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            // do something when the button is clicked
+                            Intent whatsappIntent = new Intent(Intent.ACTION_SEND);
+                            whatsappIntent.setType("text/plain");
+                            //whatsappIntent.setPackage("com.whatsapp");
+                            whatsappIntent.putExtra(Intent.EXTRA_TEXT, urlString);
+                            try {
+                                startActivity(whatsappIntent);
+                            } catch (android.content.ActivityNotFoundException ex) {
+                                Toast.makeText(getApplicationContext(), "Apps have not been installed.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                    Glide.with(MainActivity.this.getApplicationContext()).load(urlString).into(tempImageView);
+                    inflateThisView.addView(view);
+                }
             }
             catch(JSONException e){
                 Log.e("ON_POST_EXECUTE", e.toString());
