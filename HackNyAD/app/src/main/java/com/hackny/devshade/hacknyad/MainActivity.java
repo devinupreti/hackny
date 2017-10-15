@@ -281,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
                     ArrayList<String> result = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     //logTextView.setText(result.get(0));
-                    Toast.makeText(getApplicationContext(), result.get(0), Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getApplicationContext(), result.get(0), Toast.LENGTH_SHORT).show();
                     String inputString = result.get(0);
                     inputString = inputString.replaceAll(" ", "+");
                     GetData getData = new GetData();
@@ -426,7 +426,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 Log.i("TRIAL0", args[0].input);
-                URL url = new URL("http://api.giphy.com/v1/gifs/search?q="+args[0].input+"&api_key=hpmVXfnjzUtSV7En4zbgEHpzwcoLbDPn&limit="+args[0].progress);
+                URL url = new URL("http://api.giphy.com/v1/gifs/search?q="+args[0].input+"&api_key=hpmVXfnjzUtSV7En4zbgEHpzwcoLbDPn&rating=g&limit="+args[0].progress);
                 if(args[0].isTrending == true){
                     url = new URL("http://api.giphy.com/v1/gifs/trending?api_key=hpmVXfnjzUtSV7En4zbgEHpzwcoLbDPn&limit="+args[0].progress);
                 }
