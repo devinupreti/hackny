@@ -1,0 +1,25 @@
+1. In build.gradle
+
+compile 'com.clarifai.clarifai-api2:core:2.3.0'
+
+2. 
+
+new ClarifaiBuilder("e8200df8d6b14beaab26d15641935799")
+      .client(new OkHttpClient()) // OPTIONAL. Allows customization of OkHttp by the user
+      .buildSync(); // or use .build() to get a Future<ClarifaiClient>
+
+new ClarifaiBuilder("e8200df8d6b14beaab26d15641935799").buildSync();
+
+
+//via URL
+client.getDefaultModels().generalModel().predict()
+      .withInputs(ClarifaiInput.forImage("https://samples.clarifai.com/metro-north.jpg"))
+      .executeSync();
+
+//via bytes
+client.getDefaultModels().generalModel().predict()
+    .withInputs(ClarifaiInput.forImage(new File("/home/user/image.jpeg")))
+    .executeSync();
+
+You can refer to this
+https://clarifai.com/developer/guide/
