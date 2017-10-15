@@ -30,6 +30,15 @@
                 android:padding="0dp"
                 android:scaleType="fitXY" />
 
+            <ImageView
+                android:id="@+id/imageView5"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="10dp"
+                android:tint="#ffffff"
+                app:srcCompat="@drawable/share" />
+
             <Button
                 android:id="@+id/sharebuttonit"
                 android:layout_width="match_parent"
