@@ -37,3 +37,10 @@ We learned working for 15 hours straight.
 ## What's next for Soliso  
 Soliso is still far from perfect and we think many more functionalities can be added to the application such as video to GIFs, instant voice recognition and more.
 
+## Built With  
+android  
+android-studio  
+java  
+giphy  
+clarifai  
+
